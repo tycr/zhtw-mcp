@@ -1,0 +1,43 @@
+name: Build Windows zhtw-mcp
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Show tool versions
+        shell: pwsh
+        run: |
+          python --version
+          rustc --version
+          cargo --version
+
+      - name: Generate OpenCC data and build release
+        shell: pwsh
+        run: |
+          python scripts/gen-s2t-tables.py
+          rustfmt src/engine/s2t_data.rs
+          cargo build --release
+          .\target\release\zhtw-mcp.exe --version
+
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: zhtw-mcp-windows-x64
+          path: target/release/zhtw-mcp.exe
