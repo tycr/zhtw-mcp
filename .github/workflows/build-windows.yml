@@ -2,6 +2,9 @@ name: Build Windows zhtw-mcp
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/build-windows.yml"
 
 jobs:
   build-windows:
@@ -19,7 +22,7 @@ jobs:
       - name: Setup Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: rustfmt
 
       - name: Show tool versions
         shell: pwsh
@@ -28,13 +31,29 @@ jobs:
           rustc --version
           cargo --version
 
-      - name: Generate OpenCC data and build release
+      - name: Generate OpenCC data
         shell: pwsh
         run: |
           python scripts/gen-s2t-tables.py
+
+      - name: Format generated Rust data
+        shell: pwsh
+        run: |
           rustfmt src/engine/s2t_data.rs
+
+      - name: Build release exe
+        shell: pwsh
+        run: |
           cargo build --release
-          .\target\release\zhtw-mcp.exe --version
+
+      - name: Verify executable exists
+        shell: pwsh
+        run: |
+          if (!(Test-Path "target\release\zhtw-mcp.exe")) {
+            Write-Error "target\release\zhtw-mcp.exe not found"
+            exit 1
+          }
+          Get-Item "target\release\zhtw-mcp.exe"
 
       - name: Upload Windows executable
         uses: actions/upload-artifact@v4
